@@ -4,6 +4,9 @@ import com.alibaba.fastjson.JSON;
 import com.huey.learning.elasticsearch.rest.high.sample.entity.Bank;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.HttpHost;
+import org.elasticsearch.action.bulk.BulkItemResponse;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetRequest;
@@ -30,6 +33,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author huey
@@ -180,6 +185,58 @@ public class DocumentAPITest {
         log.info("{}", deleteResponse);
 
         MatcherAssert.assertThat(deleteResponse.status(), Matchers.equalTo(RestStatus.OK));
+
+    }
+
+    @Test
+    public void testBulk() throws IOException {
+
+        Bank bank1 = new Bank();
+        bank1.setAccountNumber(20L);
+        bank1.setBalance(16418L);
+        bank1.setFirstName("Elinor");
+        bank1.setLastName("Ratliff");
+        bank1.setAge(36L);
+        bank1.setGender("M");
+        bank1.setAddress("282 Kings Place");
+        bank1.setEmployer("Scentric");
+        bank1.setEmail("elinorratliff@scentric.com");
+        bank1.setCity("Ribera");
+        bank1.setState("WA");
+
+        Bank bank2 = new Bank();
+        bank2.setAccountNumber(25L);
+        bank2.setBalance(40540L);
+        bank2.setFirstName("Virginia");
+        bank2.setLastName("Ayala");
+        bank2.setAge(39L);
+        bank2.setGender("F");
+        bank2.setAddress("171 Putnam Avenue");
+        bank2.setEmployer("Filodyne");
+        bank2.setEmail("virginiaayala@filodyne.com");
+        bank2.setCity("Nicholson");
+        bank2.setState("PA");
+
+        Bank[] banks = new Bank[] {bank1, bank2};
+
+        List<IndexRequest> indexRequests = new ArrayList<>();
+        for (Bank bank : banks) {
+            String bankDoc = JSON.toJSONString(bank);
+            IndexRequest indexRequest = new IndexRequest()
+                    .index("bank")
+                    .source(bankDoc, XContentType.JSON);
+            indexRequests.add(indexRequest);
+        }
+
+        BulkRequest bulkRequest = new BulkRequest();
+        indexRequests.forEach(bulkRequest::add);
+
+        BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+
+        BulkItemResponse[] bulkItemResponses = bulkResponse.getItems();
+        for (BulkItemResponse bulkItemResponse : bulkItemResponses) {
+            log.info("{} is failed? {}", bulkItemResponse.getId(), bulkItemResponse.isFailed());
+        }
 
     }
 
